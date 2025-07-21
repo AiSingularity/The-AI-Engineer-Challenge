@@ -40,8 +40,12 @@ export default function Home() {
         result += decoder.decode(value);
         setResponse(result);
       }
-    } catch (err: any) {
-      setError(err.message || "Error occurred");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Error occurred");
+      }
     } finally {
       setLoading(false);
     }
