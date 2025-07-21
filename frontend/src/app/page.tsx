@@ -1,11 +1,102 @@
 import Image from "next/image";
+import React, { useState } from "react";
 
 export default function Home() {
+  const [apiKey, setApiKey] = useState("");
+  const [developerMessage, setDeveloperMessage] = useState("");
+  const [userMessage, setUserMessage] = useState("");
+  const [response, setResponse] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResponse("");
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          developer_message: developerMessage,
+          user_message: userMessage,
+          api_key: apiKey,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Unknown error");
+      }
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response body");
+      let result = "";
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        result += decoder.decode(value);
+        setResponse(result);
+      }
+    } catch (err: any) {
+      setError(err.message || "Error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <h1 className="text-3xl font-bold text-center text-foreground mb-8" style={{ letterSpacing: '-0.02em' }}>
               This is Wael&apos;s First Node.js App
       </h1>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full max-w-xl bg-white/80 dark:bg-black/40 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 mb-8">
+        <label className="font-semibold">OpenAI API Key
+          <input
+            type="password"
+            className="mt-1 block w-full rounded border border-gray-300 dark:border-gray-600 p-2 bg-white dark:bg-black text-black dark:text-white"
+            value={apiKey}
+            onChange={e => setApiKey(e.target.value)}
+            required
+            autoComplete="off"
+            placeholder="sk-..."
+          />
+        </label>
+        <label className="font-semibold">Developer Message
+          <input
+            type="text"
+            className="mt-1 block w-full rounded border border-gray-300 dark:border-gray-600 p-2 bg-white dark:bg-black text-black dark:text-white"
+            value={developerMessage}
+            onChange={e => setDeveloperMessage(e.target.value)}
+            required
+            placeholder="System prompt or context"
+          />
+        </label>
+        <label className="font-semibold">User Message
+          <input
+            type="text"
+            className="mt-1 block w-full rounded border border-gray-300 dark:border-gray-600 p-2 bg-white dark:bg-black text-black dark:text-white"
+            value={userMessage}
+            onChange={e => setUserMessage(e.target.value)}
+            required
+            placeholder="User's message"
+          />
+        </label>
+        <button
+          type="submit"
+          className="mt-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+          disabled={loading}
+        >
+          {loading ? "Sending..." : "Send to OpenAI"}
+        </button>
+        {error && <div className="text-red-600 font-semibold mt-2">{error}</div>}
+      </form>
+      {response && (
+        <div className="w-full max-w-xl bg-gray-100 dark:bg-gray-800 p-4 rounded shadow-inner text-black dark:text-white whitespace-pre-wrap">
+          <strong>OpenAI Response:</strong>
+          <div>{response}</div>
+        </div>
+      )}
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
         <Image
           className="dark:invert"
